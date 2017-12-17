@@ -1,0 +1,49 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+
+
+\begin{document}
+    \title{Homework 8}
+    \author{Fabian Otto -- Matrikelnummer: 2792549\\
+    Foundations of Language Technology}
+    \maketitle
+
+    \section*{Homework 8.1}
+
+    \noindent\textbf{Warum sind POS-Tagger wichtig für NLP und welche Arten von Downstream werden mit POS-Tagging möglich (+ Bsp.)?}\\
+    POS Tagger sind wichtig, da sie Auskunft über die grundlegende Struktur des Textes geben.
+    Als Folge dessen können im weiteren Syntax und Semantik des Textes betrachtet werden.
+    Damit ist schließlich der Computer in der Lage den Inhalt zu interpretieren und eine Antwort in einer natürlichen Sprache zu verfassen bzw. den an Ihn gestellten Auftrag auszuführen.
+    Durch POS Tags kann z.B. bei manchen Ambiguitäten die korrekte Bedeutung ausgewählt, die Syntax auf Korrektheit überprüft oder Letztere für die Deutung (Semantik) des Texts herangezogen werden.
+    POS Tags stellen nach dem Tokenizing/Segementation den wichtigsten Schritt dar, um mit dem Text weiter sinnvoll arbeiten zu können.
+
+    \noindent\textbf{Welche Stragien für die Implementierung eines POS Taggers sind Ihnenbereits bekannt und welche Vor-/Nachteile (min. 2) haben diese?}\\
+    (Mir ist nicht klar, wie ich diese Frage in 2-3 Sätzen sinnvoll und in einem ausreichend Maß beantworten soll. Sorry Nils :( )\\
+    Eine einfache Möglichkeit ist der Einsatz eines Default Taggers, dieser klassifiert alle Tokens mit dem selben POS-Tag.
+    Dies funktioniert zwar für die Mehrheit der Tokens (sofern ein Majority Vote verwendet wird), für alle anderen jedoch findet in 100\% der Fälle eine Fehlklassifizierung statt.
+    Eine reine Verwendung des Default Taggers macht damit keinen Sinn, es entsteht kein Mehrwert, wenn man den Text weiter verarbeiten möchte.
+    Als Backup Tagger oder Evaluationsgrundlage ist er jedoch geeignet.
+    Regex Tagger sind eine weitere Alternative, sie erreichen eine höhere Accuracy als Default Tagger,
+    Für Standardfälle funktionieren diese auch akzeptabel (eating $\rightarrow$ *ing $\rightarrow$ VBG) sind allerdings insb. für Sonderfälle (ate $\rightarrow$ ???) ungeeignet.
+    Weiterhin sind diese mit viel manueller Arbeit verbunden und somit aufwändig und teuer zu erstellen.
+    Der Lookup Tagger verwendet einen Trainingscorpus und klassifiziert Tokens anhand der Frequenzen innerhalb des Trainingscorpus.
+    Dies funktioniert, ähnlich wie beim Default Tagger, für den Hauptfall (nun konkreter für) dieses Tokens, für mehrdeutige Fälle hingegen, werden alle anderen Fälle nie richtig klassifiziert.
+    Positiv ist, dass vor allem die ersten 2000 bis 4000 (Folie 35, Vorlesung 8) bereits ausreichen, um eine wesentlich bessere Accuracy als bei den obigen beiden Alternativen zu erzielen.
+    Problem ist, dass auch eine signifikante Erhöhung des Lookup dicts nur noch zu wenig bis gar keiner Verbesserung führt.
+    Keines der obigen Beispiele bezieht jedoch weiteren Kontext mit ein, wie vorheringe Wörter oder Tags.
+    N-Gram Tagger nutzen diese zusätzlichen Informationen, allerdings ist die Wahrscheinlichkeit einen Tag für ein N-gram zu finden bedeutend geringer.
+    Insbesondere mit steigendem N.
+
+    \noindent\textbf{Wie können diese Strategien verbessert werden?}\\
+    Eine Verbesserung ist möglich, indem auch der Kontext herangezogen wird, wie dies bei den N-gram Tagger der Fall ist.
+    N-Gramm Tagger könnten zudem auch die Worte und nicht nur die Tags für die Klassifizierung heranziehen.
+    Statistische Modell, wie HMM bieten no weiter Möglichkeiten den Kontext zu analysieren und zu nutzen.
+    Wie immer gilt: Je mehr Daten desto besser und je qualitativ hochwertiger desto besser.
+
+\end{document}

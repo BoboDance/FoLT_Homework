@@ -5,6 +5,14 @@ from nltk.corpus import stopwords, movie_reviews
 
 # short heads up: This code is messy, I am sorry for that :(
 
+# the output shows only the model trained on train and dev set evaluated against the test set
+# Executing every possible combination of features would take some time and
+# I do not want you to spend more time than needed. :)
+
+
+# Self-Reminder: Do not ever swap the position of ":" in the test
+# and training set definitions. This f*** everything up and nobody will find it. :(
+
 # uhhhh, ugly global variable
 stop = stopwords.words('english')
 
@@ -355,20 +363,38 @@ badWords = [
     'zoophilia']
 
 
-def get_features(text, word_dict, bigram_dict):
+def get_features(text, word_cfd, bigram_cfd):
     res_dict = nltk.defaultdict(int)
-    positive_fd = word_dict["pos"]
-    negative_fd = word_dict["neg"]
+
+    # score of resulting words
+    # This basically takes the freq in the train set for pos and neg as score
+    # Given this I have an automatic weighting:
+    # In case a term does not only occur but also occurs often, it is rated higher
+    # same for bigrams further down
+
+    # This is a questionable feature.
+    # The problem is: Both sentiments use similar words, even words like good.
+
+    positive_fd = word_cfd["pos"]
+    negative_fd = word_cfd["neg"]
     word_pos = sum([positive_fd[word] for word in text])
     word_neg = sum([-negative_fd[word] for word in text])
-    res_dict.update({'pos_score': word_pos, 'neg score': word_neg,
-                     'is_positive': True if word_pos - word_neg > 0 else False})
+    res_dict.update({
+        'pos_score': word_pos,
+        'neg_score': word_neg,
+        'difference': word_pos - word_neg,
+        'is_positive': True if (word_pos - word_neg) > 0 else False
+    })
 
     # words w/o stopwords, delimiters, etc.
-    cleaned_words = [token.lower() for token in text if token not in stop and token.isalnum()]
+    cleaned_words = [token.lower()
+                     for token in text
+                     if token not in stop
+                     and token.isalnum()
+                     ]
 
-    # just the bigram freqDist
-    text_fdist = nltk.FreqDist(nltk.bigrams(cleaned_words))
+    # I also tried only using only the top words, no success
+    text_fdist = nltk.FreqDist(cleaned_words)
     res_dict.update(text_fdist)
 
     # using sentiSynsets in order to determine positive or negative tendency
@@ -378,6 +404,13 @@ def get_features(text, word_dict, bigram_dict):
     # my_dict.update({'senti_score_neg': res_neg_swn, 'senti_score_pos': res_pos_swn})
 
     bigrams = nltk.bigrams(cleaned_words)
+
+    # just the bigram freqDist
+    # I also tried only using the top bigrams, no success
+    # I also tried just using uncleaned bigrams (included stopwords, delimiters, etc.), no changes in the results
+    text_fdist_bigram = nltk.FreqDist(bigrams)
+    res_dict.update(text_fdist_bigram)
+
     pos_score = 0
     neg_score = 0
     # get bigram score
@@ -385,19 +418,27 @@ def get_features(text, word_dict, bigram_dict):
     # the basis freqDist, which determines the freq of each bigram can be found below
     # Also important: remove stopwords otherwise this is stupid ("of the", "this is", etc.)
     for bigram in bigrams:
-        neg_score += bigram_dict['neg'][bigram]
-        pos_score += bigram_dict['pos'][bigram]
+        neg_score += bigram_cfd['neg'][bigram]
+        pos_score += bigram_cfd['pos'][bigram]
         # add score for each bigram, does not change anything
-        # res_dict[str(bigram) + "_neg"] += bigram_dict['neg'][bigram]
-        # res_dict[str(bigram) + "_pos"] += bigram_dict['neg'][bigram]
+        # res_dict[str(bigram) + "_neg"] += bigram_cfd['neg'][bigram]
+        # res_dict[str(bigram) + "_pos"] += bigram_cfd['neg'][bigram]
 
-    res_dict.update({'pos_score_bi': pos_score, 'neg score_bi': neg_score, 'difference': pos_score - neg_score,
-                     'is_positive_bi': True if pos_score - neg_score > 0 else False})
+    res_dict.update({
+        'pos_score_bi': pos_score,
+        'neg score_bi': neg_score,
+        'difference_bi': pos_score - neg_score,
+        'is_positive_bi': True if pos_score - neg_score > 0 else False
+    })
 
     # just some other plain simple features
-    # looks like there are no bad words in reviews :(
-    res_dict.update(
-        {'length': len(text), "contains_bad_word": True if [word for word in text if word in badWords] else False})
+    # this is more likely to decrease the performance than improve it
+    # looks like there are not enough bad words in reviews :(
+    # res_dict.update(
+    #     {
+    #         'length': len(text),
+    #         "contains_bad_word": True if [word for word in text if word in badWords] else False
+    #     })
 
     return res_dict
 
@@ -411,59 +452,73 @@ review_data = [(movie_reviews.words(fileid), category)
                ]
 
 # do not forget to shuffle
-random.seed(10)
+random.seed(15)
 random.shuffle(review_data)
 
 # train, dev, test
-train_data = [(text, category) for (text, category) in review_data[((len(review_data) * 8) // 10):]]
+train_data = [(text, category) for (text, category) in review_data[:((len(review_data) * 8) // 10)]]
 dev_data = [(text, category) for (text, category) in
             review_data[(len(review_data) * 8) // 10:(len(review_data) * 9) // 10]]
-test_data = [(text, category) for (text, category) in review_data[:((len(review_data) * 9) // 10)]]
+test_data = [(text, category) for (text, category) in review_data[((len(review_data) * 9) // 10):]]
 train_dev_data = train_data + dev_data
 
-# get most frequent words in train and dev data
-# choosing 1000 or 5000 does only improve the results slightly
-threshold = 5000
+print("Training data prepared.")
+
+# get most frequent words in train data
+# choosing 1000 or 5000 only improves the results slightly
+threshold = threshold_bigram = 1000
 
 # this is bad, do not use all words, just use the training data --> overfitting, but good accuracy, though :)
 # fd_all_words = nltk.FreqDist(w.lower() for w in movie_reviews.words())
 
-# alternative with removing stopwords and commas, etc.
+# on training dat and as alternative with removing stopwords and commas, etc.
 fd_all_words = nltk.FreqDist([w.lower() for elem, _ in train_dev_data for w in elem
                               if w not in stop
-                              and w.isalnum()])
+                              and w.isalnum()
+                              ])
 top_words = [word for (word, _) in fd_all_words.most_common(threshold)]
+
 # review_data_fdist = [(nltk.FreqDist(token.lower() for token in words if token in top_words), category)
 #                      for words, category in review_data]
 
-review_data_fdist = [(nltk.FreqDist(token.lower() for token in words
-                                    if token in top_words), category)
-                     for words, category in review_data]
+# this creates condition neg or pos and makes analysis/ feature extraction easier
+review_data_cfd = nltk.ConditionalFreqDist((category, token.lower())
+                                           for words, category in train_dev_data
+                                           for token in words
+                                           if token in top_words)
+
+print("Word frequencies calculated and prepared.")
 
 # get most frequent bigrams
 # basically the same as above, but with bigrams
-threshold_bigram = 5000
 
 fd_all_bigrams = nltk.FreqDist(nltk.bigrams([w.lower() for elem, _ in train_dev_data for w in elem
                                              if w not in stop
-                                             and w.isalnum()]))
+                                             and w.isalnum()
+                                             ]))
 top_bigrams = [bigram for (bigram, _) in fd_all_bigrams.most_common(threshold_bigram)]
 
-# get frequency of bigrams in train and dev data
-review_data_fdist_bigrams = [(nltk.FreqDist(elem for elem in nltk.bigrams([token.lower()
-                                                                           for token in words]) if elem in top_bigrams),
-                              category)
-                             for words, category in train_dev_data]
+# get frequency of bigrams in train data
+review_data_cfd_bigrams = nltk.ConditionalFreqDist(
+    (category, bigram)
+    for words, category in train_dev_data
+    for bigram in nltk.bigrams([token.lower() for token in words])
+    if bigram in top_bigrams)
 
+print("Bigram frequencies calculated and prepared.")
+
+###########################################
+# This is only required when using no cfd in order to create only two fd for pos and neg
+###########################################
 # build dicts, which contain freqs of positive and negative annotated bigrams
-bigrams_total = {'pos': nltk.FreqDist(), 'neg': nltk.FreqDist()}
-for k, v in review_data_fdist_bigrams:
-    bigrams_total[v].update(k)
+# bigrams_total = {'pos': nltk.FreqDist(), 'neg': nltk.FreqDist()}
+# for k, v in review_data_fdist_bigrams:
+#     bigrams_total[v].update(k)
 
 # build dicts, which contain freqs of positive and negative annotated tokens
-words_total = {'pos': nltk.FreqDist(), 'neg': nltk.FreqDist()}
-for k, v in review_data_fdist:
-    words_total[v].update(k)
+# words_total = {'pos': nltk.FreqDist(), 'neg': nltk.FreqDist()}
+# for k, v in review_data_fdist:
+#     words_total[v].update(k)
 
 # relative values
 # this is not really necessary, positive and negative are both evaluated on the same dicts (from above)
@@ -472,9 +527,14 @@ for k, v in review_data_fdist:
 # print([(word, count/n_neg) for (word, count) in res['neg'].most_common(100)])
 # print([(word, count/n_neg) for (word, count) in res['pos'].most_common(100)])
 
+# train the model and check most informative features
 nbc = nltk.NaiveBayesClassifier.train(
-    [(get_features(text, words_total, bigrams_total), category) for (text, category) in train_dev_data])
-print(nltk.classify.accuracy(nbc, [(get_features(text, words_total, bigrams_total), category) for (text, category) in
+    [(get_features(text, review_data_cfd, review_data_cfd_bigrams), category) for (text, category) in
+     train_dev_data])
+print("Accuracy on test data:",
+      nltk.classify.accuracy(nbc, [(get_features(text, review_data_cfd, review_data_cfd_bigrams), category) for
+                                   (text, category) in
                                    test_data]))
+print("\nMost informative features:")
 for elem in nbc.most_informative_features(20):
     print(elem)

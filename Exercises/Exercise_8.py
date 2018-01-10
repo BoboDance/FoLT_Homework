@@ -7,8 +7,8 @@
 
 # Task 8.2
 
-from nltk.corpus import brown
 import nltk
+from nltk.corpus import brown
 
 
 def get_most_likely_tag(word, cfd):

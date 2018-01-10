@@ -1,9 +1,9 @@
 # Task 9.1
-from nltk.corpus import names
-import nltk
 import random
+
+import nltk
 from nltk.classify import accuracy
-import numpy as np
+from nltk.corpus import names
 
 
 def gender_features(word):

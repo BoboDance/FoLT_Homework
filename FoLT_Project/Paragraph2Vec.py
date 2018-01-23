@@ -14,6 +14,10 @@ model_location = os.path.dirname(os.path.realpath(__file__)) + "/models"
 class Paragraph2Vec:
 
     def __init__(self, train_x, train_y, dev_x, dev_y):
+
+        self.iter = 20
+        self.stop_words = stopwords.words("english")
+
         self.train_x = train_x
         self.train_y = train_y
 
@@ -27,24 +31,26 @@ class Paragraph2Vec:
         self.index = None
 
         self.doc2vec_model = None
-        self.iter = 1
-        self.tagged_docs_pos = None
-        self.tagged_docs_neg = None
+        self.tagged_docs_pos_train = None
+        self.tagged_docs_neg_train = None
+        self.tagged_docs_pos_test = None
+        self.tagged_docs_neg_test = None
 
-        self.stop_words = stopwords.words("english")
+    def run(self, build_model=True):
 
-    def run(self, build_model=False):
-
-        self.tagged_docs_pos, self.tagged_docs_neg = self.transform_sents(self.train_x, self.train_y)
+        self.tagged_docs_pos_train, self.tagged_docs_neg_train = self.transform_sents(self.train_x, self.train_y, False)
+        self.tagged_docs_pos_test, self.tagged_docs_neg_test = self.transform_sents(self.dev_x, self.dev_y, True)
 
         if build_model or not os.path.exists(model_location + '/reviews.doc2vec'):
             self.doc2vec_model = models.Doc2Vec(min_count=1, window=10, size=400, sample=1e-4, negative=5, workers=7)
 
-            tagged_docs = self.tagged_docs_pos + self.tagged_docs_neg
-            self.doc2vec_model.build_vocab(tagged_docs)
+            tagged_docs_train = self.tagged_docs_pos_train + self.tagged_docs_neg_train
+            tagged_docs_test = self.tagged_docs_pos_test + self.tagged_docs_neg_test
+
+            self.doc2vec_model.build_vocab(tagged_docs_train + tagged_docs_test)
 
             for epoch in range(self.iter):
-                shuffled = list(tagged_docs)
+                shuffled = list(tagged_docs_train + tagged_docs_test)
                 random.shuffle(shuffled)
                 self.doc2vec_model.train(shuffled, total_examples=self.doc2vec_model.corpus_count,
                                          epochs=self.iter)
@@ -57,20 +63,29 @@ class Paragraph2Vec:
         train_arrays = []
         train_labels = []
 
-        for i in range(len(self.tagged_docs_pos)):
-            train_arrays.append(self.doc2vec_model.docvecs['pos_' + str(i)])
+        for i in range(len(self.tagged_docs_pos_train)):
+            train_arrays.append(self.doc2vec_model.docvecs['train_pos_' + str(i)])
             train_labels.append(1)
 
-        for i in range(len(self.tagged_docs_neg)):
-            train_arrays.append(self.doc2vec_model.docvecs['pos_' + str(i)])
+        for i in range(len(self.tagged_docs_neg_train)):
+            train_arrays.append(self.doc2vec_model.docvecs['train_neg_' + str(i)])
             train_labels.append(0)
+
+        test_arrays = []
+        test_labels = []
+
+        for i in range(len(self.tagged_docs_pos_test)):
+            test_arrays.append(self.doc2vec_model.docvecs['test_pos_' + str(i)])
+            test_labels.append(1)
+
+        for i in range(len(self.tagged_docs_neg_test)):
+            test_arrays.append(self.doc2vec_model.docvecs['test_neg_' + str(i)])
+            test_labels.append(0)
 
         classifier = LogisticRegression()
         classifier.fit(train_arrays, train_labels)
 
-        test = self.remove_stopwords(self.dev_x)
-
-        print(self.doc2vec_model[test])
+        print(classifier.score(test_arrays, test_labels))
 
     def calc_simalarity(self, build_model):
         self.get_models(build_model)
@@ -139,7 +154,7 @@ class Paragraph2Vec:
         else:
             raise ValueError("You have to build a model dict and corpus first.")
 
-    def transform_sents(self, sents, labels):
+    def transform_sents(self, sents, labels, is_test):
 
         neg_ctr = 0
         pos_ctr = 0
@@ -150,12 +165,12 @@ class Paragraph2Vec:
 
             if sent_class == "neg":
                 neg.append(TaggedDocument(self.remove_stopwords(tokens),
-                                          [sent_class + '_%s' % pos_ctr]))
+                                          [("train_" if not is_test else "test_") + sent_class + '_%s' % neg_ctr]))
 
                 neg_ctr += 1
             else:
                 pos.append(TaggedDocument(self.remove_stopwords(tokens),
-                                          [sent_class + '_%s' % pos_ctr]))
+                                          [("train_" if not is_test else "test_") + sent_class + '_%s' % pos_ctr]))
                 pos_ctr += 1
 
         logging.info("Finished formatting documents.")

@@ -18,3 +18,6 @@
         - (('one', 'worst'), 1)
         - (('total', 'waste'), 1)
 
+-  Accuracy for TfIdf (bigrams): 0.8186
+-  Accuracy for TfIdf (unigrams): 0.8502
+

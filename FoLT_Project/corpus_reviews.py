@@ -1,4 +1,4 @@
-from nltk.corpus.reader import CategorizedPlaintextCorpusReader
+from nltk.corpus.reader import CategorizedPlaintextCorpusReader, PlaintextCorpusReader
 from nltk.corpus.util import LazyCorpusLoader
 
 reviews = LazyCorpusLoader(

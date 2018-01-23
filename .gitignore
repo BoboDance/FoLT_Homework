@@ -151,3 +151,5 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 
+# Models
+FoLT_Project/models/*

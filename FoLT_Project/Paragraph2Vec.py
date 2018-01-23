@@ -5,6 +5,7 @@ import random
 from gensim import corpora, models, similarities
 from gensim.models.doc2vec import TaggedDocument
 from nltk.corpus import stopwords
+from sklearn.linear_model import LogisticRegression
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 model_location = os.path.dirname(os.path.realpath(__file__)) + "/models"
@@ -53,17 +54,23 @@ class Paragraph2Vec:
         else:
             self.doc2vec_model = models.Doc2Vec.load(model_location + '/reviews.doc2vec')
 
-        # print(self.doc2vec_model.most_similar('good'))
-        print(self.doc2vec_model.docvecs['pos_0'], self.train_y[0])
-        print(self.doc2vec_model.docvecs['neg_0'], self.train_y[1])
+        train_arrays = []
+        train_labels = []
 
-        for i in range(12500):
-            train_arrays[i] = self.doc2vec_model['pos' + str(i)]
-            train_labels[i] = 1
-            train_labels[12500 + i] = 0
+        for i in range(len(self.tagged_docs_pos)):
+            train_arrays.append(self.doc2vec_model.docvecs['pos_' + str(i)])
+            train_labels.append(1)
 
-        # classifier = LogisticRegression()
-        # classifier.fit(train_arrays, train_labels)
+        for i in range(len(self.tagged_docs_neg)):
+            train_arrays.append(self.doc2vec_model.docvecs['pos_' + str(i)])
+            train_labels.append(0)
+
+        classifier = LogisticRegression()
+        classifier.fit(train_arrays, train_labels)
+
+        test = self.remove_stopwords(self.dev_x)
+
+        print(self.doc2vec_model[test])
 
     def calc_simalarity(self, build_model):
         self.get_models(build_model)

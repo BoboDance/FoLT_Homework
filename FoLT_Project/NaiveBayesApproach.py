@@ -3,7 +3,6 @@ import random
 
 import nltk
 from nltk.corpus import stopwords
-from sklearn.model_selection import StratifiedShuffleSplit
 
 
 class NaiveBayesApproach:
@@ -87,15 +86,6 @@ class NaiveBayesApproach:
             'difference_bi': pos_score - neg_score,
             'is_positive_bi': True if pos_score - neg_score > 0 else False
         })
-
-        # just some other plain simple features
-        # this is more likely to decrease the performance than improve it
-        # looks like there are not enough bad words in reviews :(
-        # res_dict.update(
-        #     {
-        #         'length': len(text),
-        #         "contains_bad_word": True if [word for word in text if word in badWords] else False
-        #     })
 
         return res_dict
 

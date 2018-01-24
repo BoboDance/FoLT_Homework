@@ -14,17 +14,17 @@ def main():
     # nba = NaiveBayesApproach(train_words, dev_words)
     # nba.run()
 
-    # train_x, train_y = pp.get_raw_with_split(train)
-    # dev_x, dev_y = pp.get_raw_with_split(dev)
+    train_x, train_y = pp.get_raw_with_split(train)
+    dev_x, dev_y = pp.get_raw_with_split(dev)
+
+    tfidf = TfIdfApproach(train_x, train_y, dev_x, dev_y, use_bigramms=False)
+    tfidf.run()
+
+    # train_x, train_y = pp.get_words_with_split(train)
+    # dev_x, dev_y = pp.get_words_with_split(dev)
     #
-    # tfidf = TfIdfApproach(train_x, train_y, dev_x, dev_y, use_bigramms=True)
-    # tfidf.run()
-
-    train_x, train_y = pp.get_words_with_split(train)
-    dev_x, dev_y = pp.get_words_with_split(dev)
-
-    p2v = Paragraph2Vec(train_x, train_y, dev_x, dev_y)
-    p2v.run()
+    # p2v = Paragraph2Vec(train_x, train_y, dev_x, dev_y)
+    # p2v.run()
 
 
 if __name__ == "__main__":

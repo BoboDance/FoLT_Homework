@@ -7,22 +7,24 @@ from gensim.models.doc2vec import TaggedDocument
 from nltk.corpus import stopwords
 from sklearn.linear_model import LogisticRegression
 
+from FoLT_Project.Visualization import Visualization
+
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 model_location = os.path.dirname(os.path.realpath(__file__)) + "/models"
 
 
 class Paragraph2Vec:
 
-    def __init__(self, train_x, train_y, dev_x, dev_y):
+    def __init__(self, train_x, train_y, test_x, test_y):
 
-        self.iter = 20
+        self.iter = 50
         self.stop_words = stopwords.words("english")
 
         self.train_x = train_x
         self.train_y = train_y
 
-        self.dev_x = dev_x
-        self.dev_y = dev_y
+        self.test_x = test_x
+        self.test_y = test_y
 
         self.corpus = None
         self.dictionary = None
@@ -36,67 +38,20 @@ class Paragraph2Vec:
         self.tagged_docs_pos_test = None
         self.tagged_docs_neg_test = None
 
-    def run(self, build_model=True):
+    def run(self, build_model=False):
 
-        self.tagged_docs_pos_train, self.tagged_docs_neg_train = self.transform_sents(self.train_x, self.train_y, False)
-        self.tagged_docs_pos_test, self.tagged_docs_neg_test = self.transform_sents(self.dev_x, self.dev_y, True)
-
-        if build_model or not os.path.exists(model_location + '/reviews.doc2vec'):
-            self.doc2vec_model = models.Doc2Vec(min_count=1, window=10, size=400, sample=1e-4, negative=5, workers=7)
-
-            tagged_docs_train = self.tagged_docs_pos_train + self.tagged_docs_neg_train
-            tagged_docs_test = self.tagged_docs_pos_test + self.tagged_docs_neg_test
-
-            self.doc2vec_model.build_vocab(tagged_docs_train + tagged_docs_test)
-
-            for epoch in range(self.iter):
-                shuffled = list(tagged_docs_train + tagged_docs_test)
-                random.shuffle(shuffled)
-                self.doc2vec_model.train(shuffled, total_examples=self.doc2vec_model.corpus_count,
-                                         epochs=self.iter)
-
-            self.doc2vec_model.save(model_location + '/reviews.doc2vec')
-
-        else:
-            self.doc2vec_model = models.Doc2Vec.load(model_location + '/reviews.doc2vec')
-
-        train_arrays = []
-        train_labels = []
-
-        for i in range(len(self.tagged_docs_pos_train)):
-            train_arrays.append(self.doc2vec_model.docvecs['train_pos_' + str(i)])
-            train_labels.append(1)
-
-        for i in range(len(self.tagged_docs_neg_train)):
-            train_arrays.append(self.doc2vec_model.docvecs['train_neg_' + str(i)])
-            train_labels.append(0)
-
-        test_arrays = []
-        test_labels = []
-
-        for i in range(len(self.tagged_docs_pos_test)):
-            test_arrays.append(self.doc2vec_model.docvecs['test_pos_' + str(i)])
-            test_labels.append(1)
-
-        for i in range(len(self.tagged_docs_neg_test)):
-            test_arrays.append(self.doc2vec_model.docvecs['test_neg_' + str(i)])
-            test_labels.append(0)
-
-        classifier = LogisticRegression()
-        classifier.fit(train_arrays, train_labels)
-
-        print(classifier.score(test_arrays, test_labels))
+        self.get_doc2vec_model(build_model)
 
     def calc_simalarity(self, build_model):
         self.get_models(build_model)
 
-        texts_dev = self.remove_stopwords_corpus(self.dev_x)
+        texts_dev = self.remove_stopwords_corpus(self.test_x)
 
         # for sent in texts_dev:
         vec_bow = self.dictionary.doc2bow(texts_dev[0])
         vec_lsi = self.lsi_model[vec_bow]
         similar = self.index[vec_lsi]
-        print(zip(similar, self.dev_y))
+        print(zip(similar, self.test_y))
         similar = sorted(enumerate(similar), key=lambda item: -item[1])
         print(similar)
 
@@ -154,24 +109,89 @@ class Paragraph2Vec:
         else:
             raise ValueError("You have to build a model dict and corpus first.")
 
-    def transform_sents(self, sents, labels, is_test):
+    def transform_sents(self, docs, labels, is_train):
 
         neg_ctr = 0
         pos_ctr = 0
         pos = []
         neg = []
-        for i, tokens in enumerate(sents):
+        prefix = "train_" if is_train else "test_"
+        for i, sents in enumerate(docs):
             sent_class = labels[i]
 
             if sent_class == "neg":
-                neg.append(TaggedDocument(self.remove_stopwords(tokens),
-                                          [("train_" if not is_test else "test_") + sent_class + '_%s' % neg_ctr]))
+                neg.append(TaggedDocument(self.remove_stopwords(sents),
+                                          [prefix + sent_class + '_%s' % neg_ctr]))
 
                 neg_ctr += 1
             else:
-                pos.append(TaggedDocument(self.remove_stopwords(tokens),
-                                          [("train_" if not is_test else "test_") + sent_class + '_%s' % pos_ctr]))
+                pos.append(TaggedDocument(self.remove_stopwords(sents),
+                                          [prefix + sent_class + '_%s' % pos_ctr]))
                 pos_ctr += 1
 
         logging.info("Finished formatting documents.")
         return pos, neg
+
+    def get_doc2vec_model(self, build_model):
+        self.tagged_docs_pos_train, self.tagged_docs_neg_train = self.transform_sents(self.train_x, self.train_y, True)
+        self.tagged_docs_pos_test, self.tagged_docs_neg_test = self.transform_sents(self.test_x, self.test_y, False)
+
+        if build_model or not os.path.exists(model_location + '/reviews.doc2vec'):
+            self.doc2vec_model = models.Doc2Vec(min_count=1, window=10, size=400, sample=1e-4, negative=5, workers=7)
+
+            tagged_docs_train = self.tagged_docs_pos_train + self.tagged_docs_neg_train
+            tagged_docs_test = self.tagged_docs_pos_test + self.tagged_docs_neg_test
+            tagged_docs = tagged_docs_train + tagged_docs_test
+
+            self.doc2vec_model.build_vocab(tagged_docs)
+
+            shuffled = list(tagged_docs)
+            random.shuffle(shuffled)
+            self.doc2vec_model.train(shuffled, total_examples=self.doc2vec_model.corpus_count,
+                                     epochs=self.iter)
+
+            self.doc2vec_model.save(model_location + '/reviews.doc2vec')
+
+        else:
+            self.doc2vec_model = models.Doc2Vec.load(model_location + '/reviews.doc2vec')
+
+        train_arrays, train_labels = self.create_classifier_arrays(True,
+                                                                   self.tagged_docs_pos_train,
+                                                                   self.tagged_docs_neg_train)
+
+        test_arrays, test_labels = self.create_classifier_arrays(False,
+                                                                 self.tagged_docs_pos_test,
+                                                                 self.tagged_docs_neg_test)
+
+        clf = LogisticRegression()
+        clf.fit(train_arrays, train_labels)
+
+        logging.info("Finished training classifier.")
+
+        # tvecs = []
+        #
+        # for i in range(len(self.test_x)):
+        #     tdt = TaggedDocument(self.remove_stopwords(self.test_x[i]), ["test_" + str(i)])
+        #     tvecs.append(self.doc2vec_model.infer_vector(tdt.words, steps=200))
+        #
+        # logging.info("Created TaggedDocuments for Training data.")
+
+        v = Visualization(test_labels, clf.predict(test_arrays), "doc2vec")
+        v.generate()
+
+        # print(classifier.score(test_arrays, test_labels))
+
+    def create_classifier_arrays(self, is_train, pos_data, neg_data):
+        arrays = []
+        labels = []
+        prefix = "train" if is_train else "test"
+
+        for i in range(len(pos_data)):
+            arrays.append(self.doc2vec_model.docvecs[prefix + '_pos_' + str(i)])
+            labels.append("pos")
+
+        for i in range(len(neg_data)):
+            arrays.append(self.doc2vec_model.docvecs[prefix + '_neg_' + str(i)])
+            labels.append("neg")
+
+        return arrays, labels

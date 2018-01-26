@@ -1,30 +1,44 @@
+from FoLT_Project.DataTransformation import DataTransformation
 from FoLT_Project.NaiveBayesApproach import NaiveBayesApproach
-from FoLT_Project.Preprocess import Preprocess
-from FoLT_Project.TfIdfApproach import TfIdfApproach
-from FoLT_Project.corpus_reviews import reviews
 from FoLT_Project.Paragraph2Vec import Paragraph2Vec
+from FoLT_Project.TfIdfApproach import TfIdfApproach
+from FoLT_Project.corpus_reviews import reviews_train, reviews_test
+
+is_real_test = True
+
 
 def main():
-    pp = Preprocess(reviews)
-    train, dev = pp.split_data()
+    dt = DataTransformation(reviews_train, reviews_test, is_real_test=is_real_test)
+    train, test = dt.split_data()
 
-    # train_words = pp.get_words_without_split(train)
-    # dev_words = pp.get_words_without_split(train)
+    # train_words = dt.get_words_without_split(train)
+    # if is_real_test:
+    #     test_words = dt.get_test_data(test, is_get_raw=False)
+    # else:
+    #     test_words = dt.get_words_without_split(train)
     #
-    # nba = NaiveBayesApproach(train_words, dev_words)
+    # nba = NaiveBayesApproach(train_words, test_words, is_real_test=is_real_test, data_transformation=dt)
     # nba.run()
 
-    train_x, train_y = pp.get_raw_with_split(train)
-    dev_x, dev_y = pp.get_raw_with_split(dev)
-
-    tfidf = TfIdfApproach(train_x, train_y, dev_x, dev_y, use_bigramms=False)
-    tfidf.run()
-
-    # train_x, train_y = pp.get_words_with_split(train)
-    # dev_x, dev_y = pp.get_words_with_split(dev)
+    # train_x, train_y = dt.get_raw_with_split(train)
+    # if is_real_test:
+    #     test_x = dt.get_test_data(test, is_get_raw=True)
+    #     test_y = []
+    # else:
+    #     test_x, test_y = dt.get_raw_with_split(test)
     #
-    # p2v = Paragraph2Vec(train_x, train_y, dev_x, dev_y)
-    # p2v.run()
+    # tfidf = TfIdfApproach(train_x, train_y, test_x, test_y, use_bigramms=True, is_real_test=is_real_test, data_transformation=dt)
+    # tfidf.run()
+
+    train_x, train_y = dt.get_words_with_split(train)
+    if is_real_test:
+        test_x = dt.get_test_data(test, is_get_raw=False)
+        test_y = []
+    else:
+        test_x, test_y = dt.get_words_with_split(test)
+
+    p2v = Paragraph2Vec(train_x, train_y, test_x, test_y, is_real_test=is_real_test, data_transformation=dt)
+    p2v.run(build_model=False)
 
 
 if __name__ == "__main__":

@@ -3,28 +3,31 @@ import os
 import random
 
 from gensim import corpora, models, similarities
-from gensim.models.doc2vec import TaggedDocument
-from nltk.corpus import stopwords
 from sklearn.linear_model import LogisticRegression
 
+from FoLT_Project.BaseApproach import BaseApproach
 from FoLT_Project.Visualization import Visualization
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 model_location = os.path.dirname(os.path.realpath(__file__)) + "/models"
 
 
-class Paragraph2Vec:
+class Paragraph2Vec(BaseApproach):
 
-    def __init__(self, train_x, train_y, test_x, test_y):
+    def __init__(self, train_x, train_y, test_x, test_y, is_real_test, data_transformation):
 
-        self.iter = 50
-        self.stop_words = stopwords.words("english")
+        super().__init__()
+        self.data_transformation = data_transformation
+        self.is_real_test = is_real_test
+
+        self.iter = 20
 
         self.train_x = train_x
         self.train_y = train_y
 
         self.test_x = test_x
-        self.test_y = test_y
+        # just set all labels pos if not provided
+        self.test_y = test_y if not is_real_test else ["pos" for _ in range(0, len(test_x))]
 
         self.corpus = None
         self.dictionary = None
@@ -40,12 +43,13 @@ class Paragraph2Vec:
 
     def run(self, build_model=False):
 
+        # self.get_models()
         self.get_doc2vec_model(build_model)
 
     def calc_simalarity(self, build_model):
         self.get_models(build_model)
 
-        texts_dev = self.remove_stopwords_corpus(self.test_x)
+        texts_dev = self.data_transformation.remove_stopwords_corpus(self.test_x)
 
         # for sent in texts_dev:
         vec_bow = self.dictionary.doc2bow(texts_dev[0])
@@ -55,23 +59,9 @@ class Paragraph2Vec:
         similar = sorted(enumerate(similar), key=lambda item: -item[1])
         print(similar)
 
-    def remove_stopwords_corpus(self, data):
-        return [
-            [word.lower()
-             for word in text
-             if word not in self.stop_words
-             ]
-            for text in data
-        ]
-
-    def remove_stopwords(self, tokens):
-        return [word.lower()
-                for word in tokens
-                if word not in self.stop_words]
-
     def get_models(self, build_model):
         if build_model:
-            texts_train = self.remove_stopwords_corpus(self.train_x)
+            texts_train = self.data_transformation.remove_stopwords_corpus(self.train_x)
             dictionary = corpora.Dictionary(texts_train)
             dictionary.save(model_location + '/reviews.dict')
 
@@ -109,34 +99,20 @@ class Paragraph2Vec:
         else:
             raise ValueError("You have to build a model dict and corpus first.")
 
-    def transform_sents(self, docs, labels, is_train):
-
-        neg_ctr = 0
-        pos_ctr = 0
-        pos = []
-        neg = []
-        prefix = "train_" if is_train else "test_"
-        for i, sents in enumerate(docs):
-            sent_class = labels[i]
-
-            if sent_class == "neg":
-                neg.append(TaggedDocument(self.remove_stopwords(sents),
-                                          [prefix + sent_class + '_%s' % neg_ctr]))
-
-                neg_ctr += 1
-            else:
-                pos.append(TaggedDocument(self.remove_stopwords(sents),
-                                          [prefix + sent_class + '_%s' % pos_ctr]))
-                pos_ctr += 1
-
-        logging.info("Finished formatting documents.")
-        return pos, neg
-
     def get_doc2vec_model(self, build_model):
-        self.tagged_docs_pos_train, self.tagged_docs_neg_train = self.transform_sents(self.train_x, self.train_y, True)
-        self.tagged_docs_pos_test, self.tagged_docs_neg_test = self.transform_sents(self.test_x, self.test_y, False)
+
+        self.tagged_docs_pos_train, self.tagged_docs_neg_train = self.data_transformation.transform_sents(
+            self.train_x,
+            self.train_y,
+            True)
+
+        x = self.test_x if not self.is_real_test else self.test_x.values()
+        self.tagged_docs_pos_test, self.tagged_docs_neg_test = self.data_transformation.transform_sents(x,
+                                                                                                        self.test_y,
+                                                                                                        False)
 
         if build_model or not os.path.exists(model_location + '/reviews.doc2vec'):
+
             self.doc2vec_model = models.Doc2Vec(min_count=1, window=10, size=400, sample=1e-4, negative=5, workers=7)
 
             tagged_docs_train = self.tagged_docs_pos_train + self.tagged_docs_neg_train
@@ -155,13 +131,13 @@ class Paragraph2Vec:
         else:
             self.doc2vec_model = models.Doc2Vec.load(model_location + '/reviews.doc2vec')
 
-        train_arrays, train_labels = self.create_classifier_arrays(True,
-                                                                   self.tagged_docs_pos_train,
-                                                                   self.tagged_docs_neg_train)
+        train_arrays, train_labels = self.data_transformation.create_classifier_arrays(self.doc2vec_model, True,
+                                                                                       len(self.tagged_docs_pos_train),
+                                                                                       len(self.tagged_docs_neg_train))
 
-        test_arrays, test_labels = self.create_classifier_arrays(False,
-                                                                 self.tagged_docs_pos_test,
-                                                                 self.tagged_docs_neg_test)
+        test_arrays, test_labels = self.data_transformation.create_classifier_arrays(self.doc2vec_model, False,
+                                                                                     len(self.tagged_docs_pos_test),
+                                                                                     len(self.tagged_docs_neg_test))
 
         clf = LogisticRegression()
         clf.fit(train_arrays, train_labels)
@@ -176,22 +152,12 @@ class Paragraph2Vec:
         #
         # logging.info("Created TaggedDocuments for Training data.")
 
-        v = Visualization(test_labels, clf.predict(test_arrays), "doc2vec")
-        v.generate()
+        if self.is_real_test:
+            file_ids = self.test_x.keys()
+            pred = clf.predict(test_arrays)
+            self.data_transformation.write_to_file(dict(zip(file_ids, pred)), "doc2vec")
+        else:
+            v = Visualization(test_labels, clf.predict(test_arrays), "doc2vec - Logistic Regression")
+            v.generate()
 
         # print(classifier.score(test_arrays, test_labels))
-
-    def create_classifier_arrays(self, is_train, pos_data, neg_data):
-        arrays = []
-        labels = []
-        prefix = "train" if is_train else "test"
-
-        for i in range(len(pos_data)):
-            arrays.append(self.doc2vec_model.docvecs[prefix + '_pos_' + str(i)])
-            labels.append("pos")
-
-        for i in range(len(neg_data)):
-            arrays.append(self.doc2vec_model.docvecs[prefix + '_neg_' + str(i)])
-            labels.append("neg")
-
-        return arrays, labels

@@ -1,22 +1,26 @@
 import logging
-import random
 
 import nltk
 from nltk.corpus import stopwords
 
+from FoLT_Project.BaseApproach import BaseApproach
 
-class NaiveBayesApproach:
-    logging.basicConfig(level=logging.DEBUG)
 
-    def __init__(self, train, dev):
+class NaiveBayesApproach(BaseApproach):
+
+    def __init__(self, train, dev, is_real_test, data_transformation):
+        super().__init__()
         self.stop = stopwords.words('english')
         self.threshold = self.threshold_bigram = 1000
 
         self.train_data = train
-        self.dev_data = dev
+        self.test_data = dev
 
         self.word_cfd = None
         self.bigram_cfd = None
+
+        self.is_real_test = is_real_test
+        self.data_transformation = data_transformation
 
     def get_features(self, words, word_cfd, bigram_cfd):
 
@@ -99,14 +103,22 @@ class NaiveBayesApproach:
             [(self.get_features(words, self.word_cfd, self.bigram_cfd), category) for
              (words, category) in
              self.train_data])
-        print("Accuracy on test data:",
-              nltk.classify.accuracy(nbc, [
-                  (self.get_features(words, self.word_cfd, self.bigram_cfd), category) for
-                  (words, category) in
-                  self.dev_data]))
-        print("\nMost informative features:")
-        for elem in nbc.most_informative_features(20):
-            print(elem)
+        if self.is_real_test:
+            file_ids = self.test_data.keys()
+            pred = nbc.classify_many([
+                self.get_features(words, self.word_cfd, self.bigram_cfd) for
+                words in self.test_data.values()])
+            self.data_transformation.write_to_file(dict(zip(file_ids, pred)), "NaiveBayes")
+
+        else:
+            print("Accuracy on test data:",
+                  nltk.classify.accuracy(nbc, [
+                      (self.get_features(words, self.word_cfd, self.bigram_cfd), category) for
+                      (words, category) in
+                      self.test_data]))
+            print("\nMost informative features:")
+            for elem in nbc.most_informative_features(20):
+                print(elem)
 
     def get_word_cfd(self):
         fd_all_words = nltk.FreqDist([token.lower() for words, _ in self.train_data for token in words

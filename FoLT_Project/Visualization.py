@@ -2,7 +2,7 @@ import itertools
 
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, accuracy_score
 
 
 class Visualization:
@@ -51,9 +51,11 @@ class Visualization:
 
         print(self.approach_name)
         for i, cl in enumerate(self.class_names):
-            print("Precision for " + cl + ":", prfs[0][i])
-            print("Recall for " + cl + ":", prfs[1][i])
-            print("F-Measure for " + cl + ":", prfs[2][i])
+            print("Precision for {}: {}".format(cl, prfs[0][i]))
+            print("Recall for {}: {}".format(cl, prfs[1][i]))
+            print("F-Measure for {}: {}".format(cl, prfs[2][i]))
+
+        print("Accuracy: {}".format(accuracy_score(self.y_test, self.y_pred)))
 
         # Compute confusion matrix
         cnf_matrix = confusion_matrix(self.y_test, self.y_pred)

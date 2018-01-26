@@ -77,28 +77,28 @@
     Dabei ergeben sich folgende Ergebnisse:
 
     \begin{figure}[h]
-    	\begin{minipage}{0.45\textwidth}
-    		\includegraphics[scale=.35]{pictures/tfidf_nb_mnb.png}
-    	\end{minipage}
-    	\hfill
-    	\begin{minipage}{0.45\textwidth}
-    		\includegraphics[scale=.35]{pictures/tfidf_nb_sgd.png}
-    	\end{minipage}
-    	\caption{Confusion Matrix für Multinomial Naïve Bayes und Stochastic Gradient Descent.}
+        \begin{minipage}{0.45\textwidth}
+            \includegraphics[scale=.35]{pictures/tfidf_nb_mnb.png}
+        \end{minipage}
+        \hfill
+        \begin{minipage}{0.45\textwidth}
+            \includegraphics[scale=.35]{pictures/tfidf_nb_sgd.png}
+        \end{minipage}
+        \caption{Confusion Matrix für Multinomial Naïve Bayes und Stochastic Gradient Descent.}
     \end{figure}
 
     Zusätzlich besteht die Möglichkeit $n$-gramme Ranges einzusetzten.
     Dabei ergibt sich folgenden Ergebnis für $n \in \{1,\dots, 3\}$
 
-        \begin{figure}[h]
-    	\begin{minipage}{0.45\textwidth}
-    		\includegraphics[scale=.35]{pictures/tfidf_b_mnb.png}
-    	\end{minipage}
-    	\hfill
-    	\begin{minipage}{0.45\textwidth}
-    		\includegraphics[scale=.35]{pictures/tfidf_b_sgd.png}
-    	\end{minipage}
-    	\caption{Confusion Matrix für Multinomial Naïve Bayes und Stochastic Gradient Descent mit $n$-grammen.}
+    \begin{figure}[h]
+        \begin{minipage}{0.45\textwidth}
+            \includegraphics[scale=.35]{pictures/tfidf_b_mnb.png}
+        \end{minipage}
+        \hfill
+        \begin{minipage}{0.45\textwidth}
+            \includegraphics[scale=.35]{pictures/tfidf_b_sgd.png}
+        \end{minipage}
+        \caption{Confusion Matrix für Multinomial Naïve Bayes und Stochastic Gradient Descent mit $n$-grammen.}
     \end{figure}
 
     Ohne Bigramme zeigt MNB eine bessere Bestimmung von positiven Reviews auf, wohingegen SGD für negative Reviews besser zu funktionieren scheint.
@@ -106,7 +106,24 @@
     Wobei insgesamt bei MNB mit Bigrammen die besten Resultate zu finden sind mit einem F-Score von knapp unter 90\%.
 
     \section{Paragraph Word Vectors}\label{sec:paragraphWordVectors}
+    Der dritte Ansatz basiert auf Paragraph Word Vectoren, die mit einem Deep Learning Ansatz erstellt wurden.
+    Hierzu wurde die \glqq{}doc2vec\grqq{} Bibliothek von gensim eingesetzt.\footnote{https://radimrehurek.com/gensim/index.html}
+    Nach der Erstellung der Vectorrepräsentationen des Textes, werden diese in eine Logistik Regression
+    \footnote{Diese wurde auch im Beispiel von gensim eingesetzt \url{https://github.com/RaRe-Technologies/gensim/blob/develop/docs/notebooks/doc2vec-IMDB.ipynb}.
+    In diesem Projekt wurde jedoch die Sklearn Implementierung verwendet \url{http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html}.}
+    übergeben, um die Klassen der Testdaten vorherzusagen.
+    Hierbei sei erwähnt, dass für die Erstellung der Vectoren auch die Testdaten beim Training des Neuronalen Netzes eingesetzt wurden.
+    Dies wurde so realisiert, da es sich hierbei lediglich um die Ermittlung der Features und nicht um die Vorhersage selbst handelt\footnote{Darauf hatte ich auch Prof. Dr. Christian Meyer angesprochen.}.
+    Bei der Anzahl der Epochs für das Training des Deep Nets zeigten sich signifikante Unterschiede in der Genauigkeite des Logistik Regressions Modells.
+    Das derzeitige Modell wurde mit 200 und 500 Epochs trainiert, dabei konnte allerdings keine Verbesserung erreicht werden.
+    \newpage
+    Dabei ergaben sich folgender Ergebnisse:
 
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[scale=.35]{pictures/doc2vec.png}
+        \caption{Confusion Matrix für Doc2Vec und Logistik Regression.}
+    \end{figure}
 
 \end{document}
 

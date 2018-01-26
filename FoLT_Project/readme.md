@@ -1,3 +1,25 @@
+# Prerequisites #
+
+Please have the following installed:
+
+- Other:
+    - C-Compiler
+
+- Python Packages:
+    - numpy
+    - sklearn
+    - gensim
+
+Please also note that retraining the doc2vec model can take really long.
+I pretrained a model and dumped it (I hope I can upload it, it is quite large).
+However, you should change the boolean _build_model=False_ in the main, if you do not want to waint 5h.
+
+My own approach also takes really long and probably should be commented as well.
+Building the bigrams of the whole corpus takes quite a bit.
+But feel free to execute it. :D
+
+The training data should be available in your nltk_data folder in _aclImdb/test_ as provided in moodle.
+
 # Evaluation scores: #
 
 - Initial Solution of Homework 9: 0.891 
@@ -35,3 +57,12 @@
 - Precision for neg: 0.827899924185
 - Recall for neg: 0.880290205562
 - F-Measure for neg: 0.853291658527
+
+## Doc2Vec ##
+
+- Precision for pos: 0.885034288019
+- Recall for pos: 0.870980547836
+- F-Measure for pos: 0.877951180472
+- Precision for neg: 0.87108290361
+- Recall for neg: 0.885126964933
+- F-Measure for neg: 0.878048780488

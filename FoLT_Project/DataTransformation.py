@@ -9,6 +9,7 @@ from nltk.corpus import stopwords
 class DataTransformation:
     """
     Using numpy arrays for the split is somehow really bad and takes much longer, therefore I use simple lists
+    This is mainly a class for printing, reading and transforming data as necessary.
     """
 
     def __init__(self, data_resource, data_resource_test, is_real_test=False):
@@ -84,7 +85,7 @@ class DataTransformation:
         return self.data_resource.raw(fileid)
 
     def transform_sents(self, docs, labels, is_train):
-
+        """Transform sents for doc2vec"""
         neg_ctr = 0
         pos_ctr = 0
         pos = []
@@ -108,6 +109,7 @@ class DataTransformation:
 
     @staticmethod
     def create_classifier_arrays(doc2vec_model, is_train, pos_data_length, neg_data_length):
+        """Create train/test arrays from doc2vec model"""
         arrays = []
         labels = []
         prefix = "train" if is_train else "test"
@@ -138,6 +140,7 @@ class DataTransformation:
 
     @staticmethod
     def write_to_file(result_dict, name):
+        """create submission zip"""
         f = open("answer.txt", mode="w")
         for item in ["%s_%s" % (key[:-4], value) for key, value in result_dict.items()]:
             f.write("%s\n" % item)

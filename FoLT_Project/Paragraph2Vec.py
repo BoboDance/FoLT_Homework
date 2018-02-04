@@ -2,8 +2,12 @@ import logging
 import os
 import random
 
+import numpy as np
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, StratifiedShuffleSplit
 from gensim import corpora, models, similarities
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import LinearSVC, SVC
+
 
 from FoLT_Project.BaseApproach import BaseApproach
 from FoLT_Project.Visualization import Visualization
@@ -14,13 +18,14 @@ model_location = os.path.dirname(os.path.realpath(__file__)) + "/models"
 
 class Paragraph2Vec(BaseApproach):
 
-    def __init__(self, train_x, train_y, test_x, test_y, is_real_test, data_transformation):
+    def __init__(self, train_x, train_y, test_x, test_y, is_real_test, data_transformation, build_model=False):
 
         super().__init__()
         self.data_transformation = data_transformation
         self.is_real_test = is_real_test
+        self.build_model = build_model
 
-        self.iter = 20
+        self.iter = 100
 
         self.train_x = train_x
         self.train_y = train_y
@@ -36,18 +41,19 @@ class Paragraph2Vec(BaseApproach):
         self.index = None
 
         self.doc2vec_model = None
+        self.doc2vec_model_name = '/reviews.doc2vec'  # '/reviews_dev.doc2vec'
         self.tagged_docs_pos_train = None
         self.tagged_docs_neg_train = None
         self.tagged_docs_pos_test = None
         self.tagged_docs_neg_test = None
 
-    def run(self, build_model=False):
+    def run(self):
 
-        # self.get_models()
-        self.get_doc2vec_model(build_model)
+        # self.calc_similarity()
+        self.get_doc2vec_model(self.build_model)
 
-    def calc_simalarity(self, build_model):
-        self.get_models(build_model)
+    def calc_similarity(self):
+        self.get_models()
 
         texts_dev = self.data_transformation.remove_stopwords_corpus(self.test_x)
 
@@ -59,8 +65,8 @@ class Paragraph2Vec(BaseApproach):
         similar = sorted(enumerate(similar), key=lambda item: -item[1])
         print(similar)
 
-    def get_models(self, build_model):
-        if build_model:
+    def get_models(self):
+        if self.build_model:
             texts_train = self.data_transformation.remove_stopwords_corpus(self.train_x)
             dictionary = corpora.Dictionary(texts_train)
             dictionary.save(model_location + '/reviews.dict')
@@ -111,7 +117,7 @@ class Paragraph2Vec(BaseApproach):
                                                                                                         self.test_y,
                                                                                                         False)
 
-        if build_model or not os.path.exists(model_location + '/reviews.doc2vec'):
+        if build_model or not os.path.exists(model_location + self.doc2vec_model_name):
 
             self.doc2vec_model = models.Doc2Vec(min_count=1, window=10, size=400, sample=1e-4, negative=5, workers=7)
 
@@ -126,10 +132,10 @@ class Paragraph2Vec(BaseApproach):
             self.doc2vec_model.train(shuffled, total_examples=self.doc2vec_model.corpus_count,
                                      epochs=self.iter)
 
-            self.doc2vec_model.save(model_location + '/reviews.doc2vec')
+            self.doc2vec_model.save(model_location + self.doc2vec_model_name)
 
         else:
-            self.doc2vec_model = models.Doc2Vec.load(model_location + '/reviews.doc2vec')
+            self.doc2vec_model = models.Doc2Vec.load(model_location + self.doc2vec_model_name)
 
         train_arrays, train_labels = self.data_transformation.create_classifier_arrays(self.doc2vec_model, True,
                                                                                        len(self.tagged_docs_pos_train),
@@ -139,11 +145,24 @@ class Paragraph2Vec(BaseApproach):
                                                                                      len(self.tagged_docs_pos_test),
                                                                                      len(self.tagged_docs_neg_test))
 
-        clf = LogisticRegression()
+        clf = LogisticRegression(penalty='l2')
+        clf = SVC()
         clf.fit(train_arrays, train_labels)
+
+        # C_range = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        # gamma_range = [0.01, 0.02, 0.03, 0.04, 0.05, 0.10, 0.2, 0.3, 0.4, 0.5]
+        # param_grid = dict(gamma=gamma_range, C=C_range)
+        # cv = StratifiedShuffleSplit(n_splits=3, test_size=0.2, random_state=42)
+        # clf = RandomizedSearchCV(SVC(), param_distributions=param_grid, cv=cv, n_iter=5)
+        # clf.fit(train_arrays, train_labels)
+        #
+        # print(clf.best_params_)
+        # print(clf.best_estimator_)
+        # print(clf.best_score_)
 
         logging.info("Finished training classifier.")
 
+        # Approach when not training doc2vec on test reviews
         # tvecs = []
         #
         # for i in range(len(self.test_x)):
@@ -151,13 +170,13 @@ class Paragraph2Vec(BaseApproach):
         #     tvecs.append(self.doc2vec_model.infer_vector(tdt.words, steps=200))
         #
         # logging.info("Created TaggedDocuments for Training data.")
+        # print(classifier.score(test_arrays, test_labels))
 
         if self.is_real_test:
             file_ids = self.test_x.keys()
             pred = clf.predict(test_arrays)
             self.data_transformation.write_to_file(dict(zip(file_ids, pred)), "doc2vec")
         else:
-            v = Visualization(test_labels, clf.predict(test_arrays), "doc2vec - Logistic Regression")
+            v = Visualization(test_labels, clf.predict(test_arrays),
+                              "doc2vec - Logistik Regression")
             v.generate()
-
-        # print(classifier.score(test_arrays, test_labels))

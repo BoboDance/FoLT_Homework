@@ -18,11 +18,19 @@ My own approach also takes really long and probably should be commented as well.
 Building the bigrams of the whole corpus takes quite a bit.
 But feel free to execute it. :D
 
-The training data should be available in your nltk_data folder in _aclImdb/test_ as provided in moodle.
+The training data should be available in your nltk_data folder in _aclImdb/train_ as provided in moodle.
+The test data should be available in your nltk_data folder in _aclImdb/test_ as provided in moodle.
+
+The current version does not print the result to the console but instead places a zip in the project folder.
+Results are only displayed when using _is_real_test=False_.
+
+The following scores where achieved on the training data.
+The results of the test can be found in Codalab.
 
 # Evaluation scores: #
 
-- Initial Solution of Homework 9: 0.891 
+## Homework 9/NaiveBayesApproach ##
+- Accuracy avg: 0.891
 
 ## TfIdf Approach ##
 
@@ -60,9 +68,19 @@ The training data should be available in your nltk_data folder in _aclImdb/test_
 
 ## Doc2Vec ##
 
+### Logistic Regression ###
 - Precision for pos: 0.885034288019
 - Recall for pos: 0.870980547836
 - F-Measure for pos: 0.877951180472
 - Precision for neg: 0.87108290361
 - Recall for neg: 0.885126964933
 - F-Measure for neg: 0.878048780488
+
+### SVM ###
+- Precision for pos: 0.8821385176184691
+- Recall for pos: 0.8646288209606987
+- F-Measure for pos: 0.8732959101844427
+- Precision for neg: 0.8652706440142236
+- Recall for neg: 0.8827085852478839
+- F-Measure for neg: 0.87390263367917
+- Accuracy avg: 0.8736

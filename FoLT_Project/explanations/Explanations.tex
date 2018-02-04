@@ -15,7 +15,7 @@
     Foundations of Language Technology}
     \maketitle
 
-    \section{Datenstruktur}
+    \section{Datenstruktur und Problemstellung}
 
     Die Aufgabe ist es eine Sentimentanalyse für den IMDB Corpus auszuführen.
     Hierfür stehen jeweils 12.500 Reviews für das negative und positive Sentiment zur Verfügung.
@@ -87,7 +87,7 @@
         \caption{Confusion Matrix für Multinomial Naïve Bayes und Stochastic Gradient Descent.}
     \end{figure}
 
-    Zusätzlich besteht die Möglichkeit $n$-gramme Ranges einzusetzten.
+    Zusätzlich besteht die Möglichkeit $n$-gramm-Ranges einzusetzen.
     Dabei ergibt sich folgenden Ergebnis für $n \in \{1,\dots, 3\}$
 
     \begin{figure}[h]
@@ -101,29 +101,56 @@
         \caption{Confusion Matrix für Multinomial Naïve Bayes und Stochastic Gradient Descent mit $n$-grammen.}
     \end{figure}
 
-    Ohne Bigramme zeigt MNB eine bessere Bestimmung von positiven Reviews auf, wohingegen SGD für negative Reviews besser zu funktionieren scheint.
-    Beim Einsatz von Bigrammen zeigen die Ergebnisse ein leichte Verbesserung mit MNB im Vergleich zu SGD .
-    Wobei insgesamt bei MNB mit Bigrammen die besten Resultate zu finden sind mit einem F-Score von knapp unter 90\%.
+    Ohne $n$-Gramme zeigt MNB eine bessere Bestimmung von positiven Reviews auf, wohingegen SGD für negative Reviews besser zu funktionieren scheint.
+    Beim Einsatz von $n$-Grammen zeigen die Ergebnisse ein leichte Verbesserung mit MNB im Vergleich zu SGD .
+    Wobei insgesamt bei MNB mit $n$-Grammen die besten Resultate zu finden sind mit einem F-Score von knapp unter 90\%.
 
     \section{Paragraph Word Vectors}\label{sec:paragraphWordVectors}
     Der dritte Ansatz basiert auf Paragraph Word Vectoren, die mit einem Deep Learning Ansatz erstellt wurden.
-    Hierzu wurde die \glqq{}doc2vec\grqq{} Bibliothek von gensim eingesetzt.\footnote{https://radimrehurek.com/gensim/index.html}
-    Nach der Erstellung der Vectorrepräsentationen des Textes, werden diese in eine Logistik Regression
-    \footnote{Diese wurde auch im Beispiel von gensim eingesetzt \url{https://github.com/RaRe-Technologies/gensim/blob/develop/docs/notebooks/doc2vec-IMDB.ipynb}.
+    Hierzu wurde die \glqq{}doc2vec\grqq{} Bibliothek von gensim eingesetzt.\footnote{\url{https://radimrehurek.com/gensim/index.html}}
+    Nach der Erstellung der Vectorrepräsentationen des Textes, werden diese als Trainingsdaten für eine Logistik Regression
+    \footnote{Diese wurde auch im Beispiel von gensim eingesetzt
+    \url{https://github.com/RaRe-Technologies/gensim/blob/develop/docs/notebooks/doc2vec-IMDB.ipynb}
     In diesem Projekt wurde jedoch die Sklearn Implementierung verwendet \url{http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html}.}
-    übergeben, um die Klassen der Testdaten vorherzusagen.
+    bzw. eine SVM genutzt, um die Klassen der Testdaten vorherzusagen.
     Hierbei sei erwähnt, dass für die Erstellung der Vectoren auch die Testdaten beim Training des Neuronalen Netzes eingesetzt wurden.
     Dies wurde so realisiert, da es sich hierbei lediglich um die Ermittlung der Features und nicht um die Vorhersage selbst handelt\footnote{Darauf hatte ich auch Prof. Dr. Christian Meyer angesprochen.}.
-    Bei der Anzahl der Epochs für das Training des Deep Nets zeigten sich signifikante Unterschiede in der Genauigkeite des Logistik Regressions Modells.
+    Bei der Anzahl der Epochs für das Training des Deep Nets zeigten sich keine signifikanten Unterschiede in der Genauigkeit der Logistik Regression oder der SVM.
     Das derzeitige Modell wurde mit 200 und 500 Epochs trainiert, dabei konnte allerdings keine Verbesserung erreicht werden.
     \newpage
     Dabei ergaben sich folgender Ergebnisse:
 
-    \begin{figure}[htbp]
-        \centering
-        \includegraphics[scale=.35]{pictures/doc2vec.png}
-        \caption{Confusion Matrix für Doc2Vec und Logistik Regression.}
+    \begin{figure}[h]
+        \begin{minipage}{0.45\textwidth}
+            \includegraphics[scale=.35]{pictures/doc2vec.png}
+        \end{minipage}
+        \hfill
+        \begin{minipage}{0.45\textwidth}
+            \includegraphics[scale=.35]{pictures/doc2vec_SVC.png}
+        \end{minipage}
+        \caption{Confusion Matrix für Doc2Vec mit Logistik Regression und SVM.}
     \end{figure}
+
+    \section{Fazit}
+    Sowohl die Verwendung von doc2vec als auch von TfIdf bringt ähnlich gute Resultate für die Developmentdaten.
+    Eine Veränderung der Parameter im Rahmen einer GridSearch\footnote{\url{http://scikit-learn.org/stable/modules/grid_search.html}},
+    insbesondere für SVM und Logistik Regression hat hierbei keinen signifikaten Verbesserungen bewirkt.
+    Insgesamt zeigt sich, wie erwartet, die Verwendung von $n$-Grammen als nützlich.
+    Das Doc2Vec Modell i.V.m. Logistik Regression bzw. SVM zeigte, schlechtere Ergebnisse als erwartet und konnte von einer
+    \glqq{}simplen\grqq{} TfIdf Kalkulaton geschlagen werden.
+    Bei der finalen Evaluation auf den Test Daten sind alle Ansätze ähnlich gut und im Bereich von 87\% Accuracy.
+
+    \section{Laufzeit}
+    Dies is abhängig was alles ausgeführt wird.
+    Insgesamt habe ich nie alles ausgeführt, sollte aber ca. 3h+ benötigen.
+    Nur der Ansatz basieren auf der Hausübung (NaiveBayesApproach) sollte ca. 45 min. brauchen.
+    TfIdf hingegen nur ca. 1-2 min, und doc2Vec benötigt nur ca. 1h, wenn das Modell neu erstellt werden muss.
+
+    \section{Mentions}
+    Das Paper hat einige gute Ansätze, aber ich hatte leider nicht genügend Zeit mehr auszuprobieren:
+    \url{https://pdfs.semanticscholar.org/c521/80a8fe1acc99b4bf3cf3e11d3c8a38e2c7ff.pdf}\\
+    Und nette Confusion Matrizen finden sich hier:
+    \url{http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html#sphx-glr-auto-examples-model-selection-plot-confusion-matrix-py}
 
 \end{document}
 

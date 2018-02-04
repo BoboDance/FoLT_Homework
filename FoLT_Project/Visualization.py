@@ -55,7 +55,7 @@ class Visualization:
             print("Recall for {}: {}".format(cl, prfs[1][i]))
             print("F-Measure for {}: {}".format(cl, prfs[2][i]))
 
-        print("Accuracy: {}".format(accuracy_score(self.y_test, self.y_pred)))
+        print("Accuracy avg: {}".format(accuracy_score(self.y_test, self.y_pred)))
 
         # Compute confusion matrix
         cnf_matrix = confusion_matrix(self.y_test, self.y_pred)
